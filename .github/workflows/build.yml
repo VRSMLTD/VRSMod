@@ -65,7 +65,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           path: "dist/electron/Packaged"
-          name: "r2modman-${{ matrix.platform }}-build-${{ github.sha }}"
+          name: "vrsmod-${{ matrix.platform }}-build-${{ github.sha }}"
 
   build-flatpak:
     name: Build for Flatpak
@@ -88,4 +88,4 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           path: "r2modman.flatpak"
-          name: "r2modman-flatpak-build-${{ github.sha }}"
+          name: "vrsmod-flatpak-build-${{ github.sha }}"
