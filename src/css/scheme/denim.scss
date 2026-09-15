@@ -1,0 +1,130 @@
+// dark theme palette
+$night-1: #1f2d3b;
+$night-2: #354a6e;
+$night-3: #3a4958;
+$night-4: #495b6d;
+$night-5: #546a80;
+$night-9: #90a5bd;
+$night-b: #bdcbdb;
+$night-c: #cedef1;
+$night-d: #d9e3ee;
+$night-e: #e6eff8;
+$primary-1: #3273dc;
+$primary-2: #5596ff;
+
+:root.html--theme-denim {
+    // overriding variables with dark theme colors
+
+    --card-expand-shadow-color: rgba(0, 0, 0, 0.46);
+    --card-expand-background-color: rgba(0, 0, 0, 0.2);
+
+    --background: #{$night-1};
+    --text: #{$night-c};
+    --text-secondary: #{$night-9};
+    --scheme-primary: #{$primary-1};
+    --link: #{$primary-2};
+    --link-hover: #{$night-e};
+    --shadow: #00000080;
+    --border: #{$night-3};
+    --border-secondary: #{$night-2};
+    --border-hover: #{$night-5};
+    --border-active: #{$night-9};
+
+    --text-strong: #{$night-e};
+
+    --hr-background-color: #{$night-2};
+    --nav-hr-background-color: #2e3a4c;
+
+    --code-background: #{$night-2};
+
+    --notification-background-color: #{$night-2};
+
+    --card-header-color: #{$night-d};
+    --card-color: #{$night-b};
+
+    --menu-item-color: #{$night-b};
+    --menu-item-hover-background-color: #{$night-2};
+    --menu-item-hover-color: #{$night-d};
+    --menu-item-active-background-color: rgba(85, 150, 255, 0.12);
+    --menu-label-color: #{$night-b};
+
+    --nav-active-color: rgba(0, 9, 25, 0.34);
+    --nav-active-secondary-color: rgba(105, 109, 119, 0.34);
+    --nav-active-text-color: #ffffff;
+
+    --tabs-link-color: #{$night-b};
+    --tabs-link-hover-color: #{$night-d};
+    --tabs-link-active-color: #{$primary-2};
+
+    --input-color: #{$night-d};
+    --input-placeholder-color: #{rgba($night-d, 0.3)};
+    --input-focus-border-color: #{$primary-2};
+    --input-disabled-color: #{$night-b};
+    --input-disabled-background-color: #{$night-2};
+    --input-disabled-border-color: #{$night-2};
+    --input-disabled-placeholder-color: #{rgba($night-b, 0.3)};
+
+    --pagination-color: #{$night-e};
+    --pagination-hover-color: #{$night-e};
+    --pagination-focus-color: #{$night-e};
+
+    --panel-block-hover-background-color: #{$night-2};
+
+    --code-font-color: #ffb583;
+    --preview-panel-background-color: #1b2837;
+    --ecosystem-update-error-text: #ffc5cf;
+    --ecosystem-update-error-background: #4a1f2a;
+    --ecosystem-update-error-border: #6d3240;
+
+    --game-card-new-badge-background: rgba(18, 22, 45, 0.85);
+    --game-card-new-badge-border: rgba(100, 140, 255, 0.3);
+
+    --card-concern-background-color: rgba(177, 120, 89, 0.66);
+    --card-concern-secondary-background-color: #7e5442;
+    --notification-concern-background-color: #9e512e;
+    --notification-concern-text-color: #eaeaea;
+
+    --v2-primary-text-color: #{$night-e};
+    --v2-secondary-text-color: #{$night-b};
+
+    --v2-link-text-color: #{$primary-2};
+    --v2-link-active-text-color: #{$night-e};
+
+    --v2-hero-background-color: #{$primary-1};
+    --v2-hero-text-color: #ffffff;
+    --v2-hero-subtitle-text-color: #e4f4fa;
+
+    --v2-warning-background-color: #8a6d1f;
+    --v2-warning-text-color: #fff6df;
+    --v2-warning-subtitle-text-color: #fff6df;
+
+    --v2-table-row-background-color: #171d27;
+    --v2-table-row-alt-background-color: #1d2532;
+    --v2-table-row-text-color: #{$night-e};
+    --v2-table-row-border-color: #313c4e;
+
+    --v2-active-tag-background-color: #{$night-2};
+    --v2-active-tag-color: #{$night-e};
+
+    --v2-inactive-tag-background-color: #{$primary-1};
+    --v2-inactive-tag-color: #ffffff;
+
+    --v2-active-menu-item-color: #ffffff;
+    --v2-inactive-menu-item-color: #{$night-b};
+}
+
+html.html--theme-denim {
+    body {
+        color: var(--text);
+    }
+    .is-primary {
+        background-color: #2b5cb6 !important;
+    }
+    .is-info {
+        background-color: #{$primary-1} !important;
+        color: #ffffff !important;
+    }
+    .is-success {
+        background-color: #29a052 !important;
+    }
+}

@@ -25,7 +25,7 @@ export default class ManagerSettingsMigration {
                 await settings.setProfile(parsedYaml.lastSelectedProfile || settings.getContext().gameSpecific.lastSelectedProfile);
                 await settings.setSteamDirectory(parsedYaml.steamDirectory! || settings.getContext().global.steamDirectory!);
                 settings.getContext().global.expandedCards = parsedYaml.expandedCards || settings.getContext().global.expandedCards;
-                settings.getContext().global.darkTheme = parsedYaml.darkTheme || false;
+                settings.getContext().global.themeName = parsedYaml.darkTheme === false ? "linen" : "ash";
                 await settings.setLaunchParameters(parsedYaml.launchParameters || settings.getContext().gameSpecific.launchParameters);
                 await settings.setIgnoreCache(parsedYaml.ignoreCache || settings.getContext().global.ignoreCache);
                 await settings.setDataDirectory(parsedYaml.dataDirectory || settings.getContext().global.dataDirectory);

@@ -86,6 +86,14 @@ const routes: RouteRecordRaw[] = [
                         meta: {title: () => profileTitle()}
                     },
                     {
+                        name: 'manager.storage',
+                        path: 'storage/',
+                        components: {
+                            subview: () => import('components/views/StorageView.vue')
+                        },
+                        meta: {title: () => profileTitle()}
+                    },
+                    {
                         name: 'manager.settings',
                         path: 'settings/',
                         components: {

@@ -44,6 +44,14 @@
                     </span>
                 </div>
             </div>
+            <br/>
+            <div v-if="changelog !== null">
+                <h3 class="title is-6">Changelog for {{selectedVersion}}</h3>
+                <MarkdownRender :markdown="changelog" />
+            </div>
+            <p v-else-if="changelogError !== null" class="has-text-grey">
+                No changelog available for this version.
+            </p>
         </template>
         <template v-slot:footer>
             <button class="button is-info" @click="downloadMod">Download with dependencies</button>
@@ -53,6 +61,7 @@
 
 <script lang="ts" setup>
 import ModalCard from "../ModalCard.vue";
+import MarkdownRender from "../v2/MarkdownRender.vue";
 import R2Error from "../../model/errors/R2Error";
 import ManifestV2 from "../../model/ManifestV2";
 import ThunderstoreVersion from "../../model/ThunderstoreVersion";
@@ -66,6 +75,7 @@ import { State } from '../../store';
 import ThunderstoreMod from '../../model/ThunderstoreMod';
 import ThunderstoreCombo from "../../model/ThunderstoreCombo";
 import { InstallMode } from "../../utils/DependencyUtils";
+import { transformPackageUrl } from '../../providers/cdn/PackageUrlTransformer';
 
 const store = getStore<State>();
 
@@ -73,6 +83,8 @@ const versionNumbers = ref<string[]>([]);
 const recommendedVersion = ref<string | null>(null);
 const selectedVersion = ref<string | null>(null);
 const currentVersion = ref<string | null>(null);
+const changelog = ref<string | null>(null);
+const changelogError = ref<R2Error | null>(null);
 
 const isOpen = computed(() => store.state.modals.isDownloadModVersionSelectModalOpen);
 const thunderstoreMod = computed(() => store.state.modals.downloadModalMod);
@@ -80,6 +92,37 @@ const thunderstoreMod = computed(() => store.state.modals.downloadModalMod);
 function closeModal() {
     store.commit("closeDownloadModVersionSelectModal");
 }
+
+function fetchChangelogFor(mod: ThunderstoreMod, versionString: string) {
+    changelog.value = null;
+    changelogError.value = null;
+    return fetch(transformPackageUrl(`https://thunderstore.io/api/cyberstorm/package/${mod.getOwner()}/${mod.getName()}/v/${versionString}/changelog/`))
+        .then(res => {
+            if (!res.ok) {
+                throw new Error(`No changelog available for ${mod.getName()} ${versionString}`);
+            }
+            return res.json();
+        })
+        .then(res => {
+            if (res.html && res.html.trim().length > 0) {
+                changelog.value = res.html;
+            } else {
+                changelog.value = null;
+                changelogError.value = new R2Error('No changelog', 'This version has no changelog.', null);
+            }
+        })
+        .catch(e => {
+            changelog.value = null;
+            changelogError.value = R2Error.fromThrownValue(e);
+        });
+}
+
+watch(selectedVersion, async (newVersion) => {
+    const mod = thunderstoreMod.value;
+    if (mod !== null && newVersion !== null) {
+        await fetchChangelogFor(mod, newVersion);
+    }
+});
 
 watch(() => store.state.modals.downloadModalMod, async () => {
     currentVersion.value = null;
@@ -148,16 +191,32 @@ async function downloadMod() {
 async function downloadHandler(tsMod: ThunderstoreMod, tsVersion: ThunderstoreVersion) {
     closeModal();
 
+    const profile = store.getters['profile/activeProfile'].asImmutableProfile();
+    let previouslyInstalledMod: ManifestV2 | undefined;
+    const modListResult = await ProfileModList.getModList(profile);
+    if (!(modListResult instanceof R2Error)) {
+        previouslyInstalledMod = modListResult.find((local: ManifestV2) => local.getName() === tsMod.getFullName());
+    }
+
     const combos = [new ThunderstoreCombo()];
     combos[0]!.setMod(tsMod);
     combos[0]!.setVersion(tsVersion);
 
     await store.dispatch('download/downloadAndInstallCombos', {
         combos,
-        profile: store.getters['profile/activeProfile'].asImmutableProfile(),
+        profile,
         game: store.state.activeGame,
         installMode: InstallMode.INSTALL_SPECIFIC
     });
+
+    // If this was a genuine update (not a downgrade), remember the version we
+    // came from so it can be restored later via "Undo last update".
+    if (previouslyInstalledMod !== undefined && tsVersion.getVersionNumber().isNewerThan(previouslyInstalledMod.getVersionNumber())) {
+        const oldVersion = previouslyInstalledMod.getVersionNumber();
+        await ProfileModList.updateMod(previouslyInstalledMod, profile, async (mod) => {
+            mod.setPreviousVersionNumber(oldVersion);
+        });
+    }
 }
 
 </script>

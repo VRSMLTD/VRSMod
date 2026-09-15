@@ -2,6 +2,7 @@
     <div class="full-height">
         <aside class="menu">
             <div id="menu__top">
+                <VrsmodLogo />
                 <p class="menu-label">{{ activeGame.displayName }}</p>
                 <div class="launch-control">
                     <div class="launch-split">
@@ -61,6 +62,12 @@
                                 <span :class="getTagLinkClasses(['manager.online', 'downloads'])">{{filteredModCount}}</span>
                             </router-link>
                         </li>
+                        <li>
+                            <router-link :to="{name: 'manager.storage'}" class="tagged-link">
+                                <i class="fas fa-database tagged-link__icon icon--margin-right" />
+                                <span class="tagged-link__content">Storage</span>
+                            </router-link>
+                        </li>
                     </ul>
                 </div>
                 <hr/>
@@ -108,6 +115,7 @@ import { getStore } from '../../providers/generic/store/StoreProvider';
 import { State } from '../../store';
 import { useRouter } from 'vue-router';
 import ActivityDropdown from '../v2/ActivityDropdown.vue';
+import VrsmodLogo from '../branding/VrsmodLogo.vue';
 import { useModFiltersComposable } from '../composables/ModFiltersComposable';
 
 const store = getStore<State>();

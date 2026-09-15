@@ -1,10 +1,16 @@
 .notification {
-    background-color: var(--notification-background-color,#f5f5f5);
+    background-color: var(--notification-background-color, #f5f5f5) !important;
     border-radius: 4px;
     position: relative;
     padding: 1.25rem 2.5rem 1.25rem 1.5rem;
 }
 
 .notification.is-warning {
-    color: var(--v2-warning-text-color, #f5f5f5);;
+    background-color: var(--v2-warning-background-color, #f5f5f5) !important;
+    color: var(--v2-warning-text-color, #222) !important;
+
+    a {
+        color: var(--v2-warning-text-color, #222) !important;
+        text-decoration: underline;
+    }
 }

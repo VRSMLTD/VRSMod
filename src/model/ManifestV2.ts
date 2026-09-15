@@ -28,6 +28,7 @@ export default class ManifestV2 {
     private optionalDependencies: string[] = [];
 
     private versionNumber: VersionNumber = new VersionNumber('0.0.0');
+    private previousVersionNumber: VersionNumber | undefined = undefined;
     private enabled: boolean = true;
     private icon: string = '';
 
@@ -87,6 +88,10 @@ export default class ManifestV2 {
         this.setOptionalDependencies(jsManifestObject.optionalDependencies);
         const versionNumber = jsManifestObject.versionNumber;
         this.setVersionNumber(new VersionNumber(`${versionNumber.major}.${versionNumber.minor}.${versionNumber.patch}`));
+        if (jsManifestObject.previousVersionNumber) {
+            const previousVersionNumber = jsManifestObject.previousVersionNumber;
+            this.setPreviousVersionNumber(new VersionNumber(`${previousVersionNumber.major}.${previousVersionNumber.minor}.${previousVersionNumber.patch}`));
+        }
         this.setGameVersion(jsManifestObject.gameVersion);
         this.icon = path.join(PathResolver.MOD_ROOT, 'cache', this.getName(), this.versionNumber.toString(), 'icon.png');
         this.setInstalledAtTime(jsManifestObject.installedAtTime || 0);
@@ -217,6 +222,14 @@ export default class ManifestV2 {
 
     public setVersionNumber(version: VersionNumber) {
         this.versionNumber = version;
+    }
+
+    public getPreviousVersionNumber(): VersionNumber | undefined {
+        return this.previousVersionNumber;
+    }
+
+    public setPreviousVersionNumber(version: VersionNumber | undefined) {
+        this.previousVersionNumber = version;
     }
 
     public enable() {

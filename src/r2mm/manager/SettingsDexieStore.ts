@@ -109,7 +109,7 @@ export default class SettingsDexieStore extends Dexie {
     private createNewSettingsInstance(): ManagerSettingsInterfaceHolder {
         return {
             global: {
-                darkTheme: true,
+                themeName: "graphite",
                 dataDirectory: "",
                 expandedCards: false,
                 funkyModeEnabled: false,
@@ -202,7 +202,7 @@ export interface ManagerSettingsInterfaceGlobal_V2 {
     steamDirectory: string | null;
     funkyModeEnabled: boolean;
     expandedCards: boolean;
-    darkTheme: boolean;
+    themeName: string;
     ignoreCache: boolean;
     dataDirectory: string;
     lastSelectedGame: string | null;

@@ -2,11 +2,13 @@
 import CategorySelectorModal from '../../components/modals/CategorySelectorModal.vue';
 import ModalCard from '../../components/ModalCard.vue';
 import { computed } from 'vue';
+import { useQuasar } from 'quasar';
 import { getStore } from '../../providers/generic/store/StoreProvider';
 import { State } from '../../store';
 import { useModFiltersComposable } from '../composables/ModFiltersComposable';
 
 const store = getStore<State>();
+const quasar = useQuasar();
 const { selectCategoryToCompareOne, selectCategoryToCompareAll, selectCategoryToExclude, unselectCategory } = useModFiltersComposable();
 
 const allowNsfw = computed({
@@ -28,7 +30,7 @@ function close() {
     store.commit("closeCategoryFilterModal");
 }
 
-const isDarkTheme = computed(() => store.getters["settings"].getContext().global.darkTheme);
+const isDarkTheme = computed(() => quasar.dark.isActive);
 const isOpen = computed(() => store.state.modals.isCategoryFilterModalOpen);
 </script>
 

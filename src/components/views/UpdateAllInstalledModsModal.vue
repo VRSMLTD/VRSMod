@@ -3,6 +3,10 @@ import { computed } from 'vue';
 
 import ModalCard from '../ModalCard.vue';
 import ThunderstoreCombo from '../../model/ThunderstoreCombo';
+import ManifestV2 from '../../model/ManifestV2';
+import VersionNumber from '../../model/VersionNumber';
+import R2Error from '../../model/errors/R2Error';
+import ProfileModList from '../../r2mm/mods/ProfileModList';
 import { getStore } from '../../providers/generic/store/StoreProvider';
 import { State } from '../../store';
 import { InstallMode } from '../../utils/DependencyUtils';
@@ -19,13 +23,39 @@ function closeModal() {
 async function updateAllToLatestVersion() {
     closeModal();
     const combos: ThunderstoreCombo[] = await store.dispatch('profile/getCombosWithUpdates');
+    const profile = store.getters['profile/activeProfile'].asImmutableProfile();
+
+    // Record each mod's current version before updating, so any of them can
+    // be reverted afterwards via "Undo last update" on that mod's card.
+    const previousVersions = new Map<string, VersionNumber>();
+    const modListResult = await ProfileModList.getModList(profile);
+    if (!(modListResult instanceof R2Error)) {
+        for (const combo of combos) {
+            const existing = modListResult.find((local: ManifestV2) => local.getName() === combo.getMod().getFullName());
+            if (existing !== undefined) {
+                previousVersions.set(existing.getName(), existing.getVersionNumber());
+            }
+        }
+    }
 
     await store.dispatch('download/downloadAndInstallCombos', {
         combos,
-        profile: store.getters['profile/activeProfile'].asImmutableProfile(),
+        profile,
         game: store.state.activeGame,
         installMode: InstallMode.UPDATE_ALL
     });
+
+    const updatedModListResult = await ProfileModList.getModList(profile);
+    if (!(updatedModListResult instanceof R2Error)) {
+        for (const mod of updatedModListResult) {
+            const oldVersion = previousVersions.get(mod.getName());
+            if (oldVersion !== undefined && mod.getVersionNumber().isNewerThan(oldVersion)) {
+                await ProfileModList.updateMod(mod, profile, async (m) => {
+                    m.setPreviousVersionNumber(oldVersion);
+                });
+            }
+        }
+    }
 }
 </script>
 

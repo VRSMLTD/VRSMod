@@ -17,7 +17,6 @@ import FunkyMode from './entries/FunkyMode.vue';
 import OnlineModList from './entries/OnlineModList.vue';
 import ModState from './entries/ModState.vue';
 import UpdateAllMods from './entries/UpdateAllMods.vue';
-import ModCache from './entries/ModCache.vue';
 import CopyLogToClipboard from './entries/CopyLogToClipboard.vue';
 import CopyTroubleshooting from './entries/CopyTroubleshooting.vue';
 import ImportLocalMod from './entries/ImportLocalMod.vue';
@@ -120,7 +119,6 @@ function isVisible(section: Category): boolean {
                     </template>
                     <CopyLogToClipboard :search-term="searchTerm"/>
                     <CopyTroubleshooting :search-term="searchTerm"/>
-                    <ModCache :search-term="searchTerm"/>
                     <ToggleCdn :search-term="searchTerm"/>
                 </SettingsSection>
 

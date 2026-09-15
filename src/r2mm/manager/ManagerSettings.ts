@@ -108,8 +108,8 @@ export default class ManagerSettings {
         await this.save();
     }
 
-    public async toggleDarkTheme() {
-        ManagerSettings.CONTEXT.global.darkTheme = !ManagerSettings.CONTEXT.global.darkTheme;
+    public async setThemeName(themeName: string) {
+        ManagerSettings.CONTEXT.global.themeName = themeName;
         await this.save();
     }
 

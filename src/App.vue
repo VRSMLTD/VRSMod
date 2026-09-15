@@ -50,9 +50,8 @@ import GenericProfileInstaller from './r2mm/installing/profile_installers/Generi
 import ErrorModal from './components/modals/ErrorModal.vue';
 import { provideStoreImplementation } from './providers/generic/store/StoreProvider';
 import baseStore from './store';
-import { onMounted, ref, watchEffect } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useUtilityComposable } from './components/composables/UtilityComposable';
-import { useQuasar } from 'quasar';
 import { NodeFsImplementation } from './providers/node/fs/NodeFsImplementation';
 import { useRouter } from 'vue-router';
 import { ProtocolProviderImplementation } from './providers/generic/protocol/ProtocolProviderImplementation';
@@ -64,8 +63,6 @@ import BreadcrumbNavigator from 'components/breadcrumbs/BreadcrumbNavigator.vue'
 const store = baseStore;
 const router = useRouter();
 provideStoreImplementation(() => store);
-
-const quasar = useQuasar();
 
 document.addEventListener('auxclick', e => {
     const target = e.target! as any;
@@ -150,10 +147,6 @@ onMounted(async () => {
     store.commit('updateModLoaderPackageNames');
     store.dispatch('tsMods/updateExclusions');
 });
-
-watchEffect(() => {
-    document.documentElement.classList.toggle('html--dark', quasar.dark.isActive);
-})
 </script>
 
 <style lang="scss">

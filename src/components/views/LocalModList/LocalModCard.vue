@@ -9,15 +9,19 @@ import { LogSeverity } from '../../../providers/ror2/logging/LoggerProvider';
 import Dependants from '../../../r2mm/mods/Dependants';
 import { useModIcon } from '../../composables/ModIconComposable';
 import { valueToReadableDate } from '../../../utils/DateUtils';
-import { splitToNameAndVersion } from '../../../utils/DependencyUtils';
+import { splitToNameAndVersion, InstallMode } from '../../../utils/DependencyUtils';
 import { computed, ref } from 'vue';
 import { getStore } from '../../../providers/generic/store/StoreProvider';
 import { State } from '../../../store';
 import { UnsatisfiedDependencies } from '../../../store/modules/ProfileModule';
 import ThunderstoreMod from "../../../model/ThunderstoreMod";
 import ThunderstoreVersion from "../../../model/ThunderstoreVersion";
+import ThunderstoreCombo from "../../../model/ThunderstoreCombo";
+import * as PackageDb from "../../../r2mm/manager/PackageDexieStore";
+import ProfileModList from "../../../r2mm/mods/ProfileModList";
 import { useConcerningPackageComposable } from '@r2/components/composables/ConcerningPackageComposable';
 import { useModManagementComposable } from '@r2/components/composables/ModManagementComposable';
+import InteractionProvider from '../../../providers/ror2/system/InteractionProvider';
 
 const store = getStore<State>();
 
@@ -40,6 +44,7 @@ const canBeDisabled = computed(() => !store.getters['isModLoader'](props.mod.get
 
 const isDeprecated = computed(() => store.state.tsMods.deprecated.get(props.mod.getName()) || false);
 const isLatestVersion = computed(() => store.getters['tsMods/isLatestVersion'](props.mod));
+const hasPreviousVersion = computed(() => props.mod.getPreviousVersionNumber() !== undefined);
 const localModList = computed(() => store.state.profile.modList);
 const tsMod = computed<ThunderstoreMod>(() => store.getters['tsMods/tsMod'](props.mod));
 
@@ -109,6 +114,46 @@ function updateMod() {
     }
 }
 
+function copyVersion() {
+    InteractionProvider.instance.copyToClipboard(props.mod.getVersionNumber().toString());
+}
+
+async function undoLastUpdate() {
+    const previousVersion = props.mod.getPreviousVersionNumber();
+    if (previousVersion === undefined || tsMod.value === undefined) {
+        return;
+    }
+
+    const activeGame = store.state.activeGame;
+    let version: ThunderstoreVersion;
+    try {
+        version = await PackageDb.getVersionAsThunderstoreVersion(
+            activeGame.internalFolderName,
+            props.mod.getName(),
+            previousVersion.toString()
+        );
+    } catch {
+        return;
+    }
+
+    const combos = [new ThunderstoreCombo()];
+    combos[0]!.setMod(tsMod.value);
+    combos[0]!.setVersion(version);
+
+    const profile = store.getters['profile/activeProfile'].asImmutableProfile();
+
+    await store.dispatch('download/downloadAndInstallCombos', {
+        combos,
+        profile,
+        game: activeGame,
+        installMode: InstallMode.INSTALL_SPECIFIC
+    });
+
+    await ProfileModList.updateMod(props.mod, profile, async (mod) => {
+        mod.setPreviousVersionNumber(undefined);
+    });
+}
+
 function downloadDependency(dependencyString: string) {
     const [name, version] = splitToNameAndVersion(dependencyString);
     const partialManifest = new ManifestV2();
@@ -173,6 +218,11 @@ function openReviewModal() {
                         {{mod.getDisplayName()}}
                         <span class="selectable card-byline">
                             v{{mod.getVersionNumber()}}
+                            <i
+                                class="fas fa-clipboard copy-version-icon"
+                                title="Copy version number"
+                                @click.stop.prevent="copyVersion"
+                            />
                         </span>
                         <span :class="`card-byline ${mod.isEnabled() && 'selectable'}`">
                             by {{mod.getAuthorName()}}
@@ -251,8 +301,12 @@ function openReviewModal() {
             <i class="fas fa-external-link-alt margin-left margin-left--half-width"></i>
         </ExternalLink>
 
-        <button v-if="!isLatestVersion" @click="updateMod()" class='button'>
-            Update
+        <button @click="updateMod()" class='button'>
+            {{ isLatestVersion ? 'Change version' : 'Update' }}
+        </button>
+
+        <button v-if="hasPreviousVersion" @click="undoLastUpdate()" class='button'>
+            Undo last update
         </button>
 
         <button v-if="missingDependencies.length"
@@ -274,5 +328,18 @@ function openReviewModal() {
 <style scoped lang="scss">
 .switch {
     position: relative;
+}
+
+.copy-version-icon {
+    font-size: 0.75em;
+    margin-left: 0.35em;
+    color: var(--text-secondary);
+    cursor: pointer;
+    opacity: 0.7;
+
+    &:hover {
+        opacity: 1;
+        color: var(--link);
+    }
 }
 </style>

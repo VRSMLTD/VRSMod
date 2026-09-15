@@ -1,0 +1,116 @@
+:root.html--theme-chocolate-strawberry {
+    --card-expand-shadow-color: rgba(0, 0, 0, 0.5);
+    --card-expand-background-color: rgba(0, 0, 0, 0.2);
+
+    --background: #161213;
+    --text: #f2c9db;
+    --text-secondary: #c98fa5;
+    --scheme-primary: #e2196b;
+    --link: #e2196b;
+    --link-hover: #e63b81;
+    --shadow: rgba(0, 0, 0, 0.5);
+    --border: #2d292a;
+    --border-secondary: #232021;
+    --border-hover: #3f3c3d;
+    --border-active: #5b5959;
+
+    --text-strong: #f2cbdc;
+
+    --hr-background-color: #2d292a;
+    --nav-hr-background-color: #2d292a;
+
+    --code-background: #2d292a;
+
+    --notification-background-color: #2d292a;
+
+    --card-header-color: #f2cbdc;
+    --card-color: #f2c9db;
+
+    --menu-item-color: #f2c9db;
+    --menu-item-hover-background-color: #2d292a;
+    --menu-item-hover-color: #f2cbdc;
+    --menu-item-active-background-color: rgba(255, 255, 255, 0.08);
+    --menu-label-color: #f2c9db;
+
+    --nav-active-color: rgba(0, 0, 0, 0.34);
+    --nav-active-secondary-color: rgba(120, 120, 120, 0.34);
+    --nav-active-text-color: #ffffff;
+
+    --tabs-link-color: #f2c9db;
+    --tabs-link-hover-color: #f2cbdc;
+    --tabs-link-active-color: #e2196b;
+
+    --input-color: #f2cbdc;
+    --input-placeholder-color: rgba(255, 255, 255, 0.3);
+    --input-focus-border-color: #e2196b;
+    --input-disabled-color: #c98fa5;
+    --input-disabled-background-color: #2d292a;
+    --input-disabled-border-color: #2d292a;
+    --input-disabled-placeholder-color: rgba(255, 255, 255, 0.2);
+
+    --pagination-color: #f2cbdc;
+    --pagination-hover-color: #f2cbdc;
+    --pagination-focus-color: #f2cbdc;
+
+    --panel-block-hover-background-color: #2d292a;
+
+    --code-font-color: #e74788;
+    --preview-panel-background-color: #131011;
+    --ecosystem-update-error-text: #ffc5cf;
+    --ecosystem-update-error-background: #4a1f2a;
+    --ecosystem-update-error-border: #6d3240;
+
+    --game-card-new-badge-background: rgba(18, 22, 45, 0.85);
+    --game-card-new-badge-border: rgba(100, 140, 255, 0.3);
+
+    --card-concern-background-color: rgba(177, 120, 89, 0.66);
+    --card-concern-secondary-background-color: #7e5442;
+    --notification-concern-background-color: #9e512e;
+    --notification-concern-text-color: #eaeaea;
+
+    // "v2" component system - separate variable namespace used by newer
+    // components (hero banners, game selection cards, tags, tables, menus).
+    --v2-primary-text-color: #f2cbdc;
+    --v2-secondary-text-color: #f2c9db;
+
+    --v2-link-text-color: #e2196b;
+    --v2-link-active-text-color: #f2cbdc;
+
+    --v2-hero-background-color: #e2196b;
+    --v2-hero-text-color: #ffffff;
+    --v2-hero-subtitle-text-color: #ffffff;
+
+    --v2-warning-background-color: #8a6d1f;
+    --v2-warning-text-color: #fff6df;
+    --v2-warning-subtitle-text-color: #fff6df;
+
+    --v2-table-row-background-color: #232021;
+    --v2-table-row-alt-background-color: #2d292a;
+    --v2-table-row-text-color: #f2cbdc;
+    --v2-table-row-border-color: #3f3c3d;
+
+    --v2-active-tag-background-color: #2d292a;
+    --v2-active-tag-color: #f2cbdc;
+
+    --v2-inactive-tag-background-color: #e2196b;
+    --v2-inactive-tag-color: #ffffff;
+
+    --v2-active-menu-item-color: #ffffff;
+    --v2-inactive-menu-item-color: #f2c9db;
+}
+
+html.html--theme-chocolate-strawberry {
+    body {
+        color: var(--text);
+    }
+    .is-primary {
+        background-color: #e2196b !important;
+    }
+    .is-info {
+        background-color: #e2196b !important;
+        color: #ffffff !important;
+    }
+    .is-success {
+        background-color: #29a052 !important;
+    }
+}

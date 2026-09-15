@@ -11,8 +11,24 @@
 
 @import "fontawesome-free-5.11.2/css/all.min.css";
 
-@include meta.load-css("scheme/light");
-@include meta.load-css("scheme/dark");
+@include meta.load-css("scheme/graphite");
+@include meta.load-css("scheme/ash");
+@include meta.load-css("scheme/linen");
+@include meta.load-css("scheme/true-black");
+@include meta.load-css("scheme/denim");
+@include meta.load-css("scheme/paper");
+@include meta.load-css("scheme/frostbyte");
+@include meta.load-css("scheme/terracotta");
+@include meta.load-css("scheme/pastel-mocha");
+@include meta.load-css("scheme/nightshade");
+@include meta.load-css("scheme/chat-blue");
+@include meta.load-css("scheme/dusky-rose");
+@include meta.load-css("scheme/blush");
+@include meta.load-css("scheme/snackbear");
+@include meta.load-css("scheme/chocolate-strawberry");
+@include meta.load-css("scheme/larimar");
+@include meta.load-css("scheme/lilac-breeze");
+@include meta.load-css("scheme/chrome-tremolite-desire");
 @include meta.load-css("scheme/funky");
 
 @import "bulma/css/bulma.css";

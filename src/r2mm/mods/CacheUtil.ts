@@ -85,5 +85,26 @@ export default class CacheUtil {
             .map(value => value.getVersionNumber());
     }
 
+    public static async getCacheSize(): Promise<number> {
+        const fs = FsProvider.instance;
+        const cacheDirectory = path.join(PathResolver.MOD_ROOT, "cache");
+        await FileUtils.ensureDirectory(cacheDirectory);
+        return await this.getDirectorySize(cacheDirectory);
+    }
+
+    private static async getDirectorySize(directory: string): Promise<number> {
+        const fs = FsProvider.instance;
+        let total = 0;
+        for (const entry of (await fs.readdir(directory))) {
+            const entryPath = path.join(directory, entry);
+            const stat = await fs.stat(entryPath);
+            if (stat.isDirectory()) {
+                total += await this.getDirectorySize(entryPath);
+            } else {
+                total += stat.size;
+            }
+        }
+        return total;
+    }
 
 }

@@ -3,13 +3,13 @@ import { onMounted, ref } from 'vue';
 import { getStore } from '../../../providers/generic/store/StoreProvider';
 import { State } from '../../../store';
 import ManagerSettings from '../../../r2mm/manager/ManagerSettings';
-import ThemeManager from '../../../r2mm/manager/ThemeManager';
+import ThemeManager, { THEMES } from '../../../r2mm/manager/ThemeManager';
 import SettingsViewWrapper from '../SettingsViewWrapper.vue';
 import { useSettingSearch } from '../../composables/SettingSearchComposable';
 
 const store = getStore<State>();
 const settings = ref<ManagerSettings | null>(null);
-const theme = ref<'light' | 'dark'>('dark');
+const theme = ref<string>(THEMES[0]!.slug);
 
 const props = defineProps<{
     searchTerm?: string;
@@ -17,24 +17,21 @@ const props = defineProps<{
 
 const { isVisible } = useSettingSearch(() => props.searchTerm, [
     'Theme',
-    'Light',
-    'Dark',
     'Appearance',
+    ...THEMES.map(t => t.label),
 ]);
 
 onMounted(async () => {
     settings.value = await ManagerSettings.getSingleton(store.state.activeGame);
-    theme.value = settings.value.getContext().global.darkTheme ? 'dark' : 'light';
+    theme.value = settings.value.getContext().global.themeName;
 });
 
-async function setTheme(value: 'light' | 'dark') {
+async function setTheme(value: string) {
     theme.value = value;
-    const dark = value === 'dark';
-    if (settings.value && settings.value.getContext().global.darkTheme !== dark) {
-        await settings.value.toggleDarkTheme();
+    if (settings.value) {
+        await settings.value.setThemeName(value);
     }
     await ThemeManager.apply();
-    document.documentElement.classList.toggle('html--dark', dark);
 }
 </script>
 
@@ -42,15 +39,16 @@ async function setTheme(value: 'light' | 'dark') {
     <SettingsViewWrapper v-show="isVisible">
         <template #title>Theme</template>
         <template #description>
-            Choose between a light or dark appearance for the manager.
+            Choose an appearance for the manager.
         </template>
         <select
             class="select"
             :value="theme"
-            @change="setTheme(($event.target as HTMLSelectElement).value as 'light' | 'dark')"
+            @change="setTheme(($event.target as HTMLSelectElement).value)"
         >
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
+            <option v-for="t in THEMES" :key="t.slug" :value="t.slug">
+                {{ t.label }}
+            </option>
         </select>
     </SettingsViewWrapper>
 </template>

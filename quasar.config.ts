@@ -252,8 +252,7 @@ export default defineConfig((ctx: QuasarContext) => {
             builder: {
                 // https://www.electron.build/configuration/
 
-                appId: 'ebkr-r2modman',
-                compression: 'store',
+                appId: 'com.vrsmltd.vrsmod',
 
                 win: {
                     target: ['nsis', 'portable'],
@@ -271,9 +270,9 @@ export default defineConfig((ctx: QuasarContext) => {
                         ? ['AppImage', 'tar.gz', 'deb', 'rpm', 'pacman']
                         : 'dir',
                     icon: 'src/assets/icon',
-                    maintainer: 'ebkr',
-                    vendor: 'ebkr',
-                    synopsis: 'Risk of Rain 2 Mod Manager',
+                    maintainer: 'VRSMLTD',
+                    vendor: 'VRSMLTD',
+                    synopsis: 'A mod manager for games using Thunderstore',
                     category: 'Game',
                     mimeTypes: ['x-scheme-handler/ror2mm'],
                 },
