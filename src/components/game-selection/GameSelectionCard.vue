@@ -96,7 +96,10 @@ watch(() => props.game.iconUrl, setIcon, { immediate: true });
     justify-content: center;
     text-align: center;
     padding: 1rem;
-    background-color: var(--border-secondary, #c9d3ee);
+    background-color: var(--card-expand-background-color, #c9d3ee);
+    border: 1px solid var(--border-hover, #b5b5b5);
+    color: var(--text-strong, #363636);
+    font-weight: 600;
 }
 
 .game-card__new-badge {
