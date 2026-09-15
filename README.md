@@ -1,14 +1,15 @@
 # VRSMod
 
-fork of r2modmanPlus. built on top of it, added some stuff i wanted that it didnt have.
+fork of r2modmanPlus. added a few things i thought would be helpful plus a few themes cause why not
+
 
 ## whats different
 
-- can downgrade an installed mod to an older version instead of just updating
-- takes a snapshot before updating so if it breaks you can revert in one click
-- changelog shows up when picking a version to downgrade to, not just on new installs
-- cleans up old cached mod versions
-- 16 themes
+-can downgrade an installed mod to an older version instead of just updating
+-takes a snapshot before updating so if it breaks you can revert in one click
+-changelog shows up when picking a version to downgrade to
+-cache cleanup moved for better visibility
+-18 themes (i miss when apps came loaded with a bunch of themes)
 
 ## installing
 
