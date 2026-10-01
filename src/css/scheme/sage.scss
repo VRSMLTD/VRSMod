@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "sage",
+    $background: #e6f2dd,
+    $text: #24352c,
+    $primary: #659287,
+    $danger: #a8524a,
+    $dark: false
+);

@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "deep-ocean",
+    $background: #1a0f36,
+    $text: #e4f3f1,
+    $primary: #0f828c,
+    $danger: #b8474a,
+    $dark: true
+);

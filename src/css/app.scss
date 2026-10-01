@@ -1,0 +1,56 @@
+// IMPORTANT:
+// Do not use dollar signs in this file, as it causes Quasar to import its variables, which infects bulma's defaults.
+// If you need to use dollar signs, consider creating a new file that contains them and importing that file from here instead.
+@charset "utf-8";
+@use "sass:meta";
+@use "quasar.variables";
+@use "v2/main";
+@use "v2/initial";
+@use "v2/components/all";
+@import "./quasar.css";
+
+@import "fontawesome-free-5.11.2/css/all.min.css";
+
+@include meta.load-css("scheme/theme-fixed");
+
+@include meta.load-css("scheme/graphite");
+@include meta.load-css("scheme/ash");
+@include meta.load-css("scheme/linen");
+@include meta.load-css("scheme/true-black");
+@include meta.load-css("scheme/denim");
+@include meta.load-css("scheme/paper");
+@include meta.load-css("scheme/frostbyte");
+@include meta.load-css("scheme/terracotta");
+@include meta.load-css("scheme/pastel-mocha");
+@include meta.load-css("scheme/nightshade");
+@include meta.load-css("scheme/chat-blue");
+@include meta.load-css("scheme/blush");
+@include meta.load-css("scheme/snackbear");
+@include meta.load-css("scheme/chocolate-strawberry");
+@include meta.load-css("scheme/larimar");
+@include meta.load-css("scheme/chartreuse");
+@include meta.load-css("scheme/forest");
+@include meta.load-css("scheme/deep-ocean");
+@include meta.load-css("scheme/crimson");
+@include meta.load-css("scheme/latte");
+@include meta.load-css("scheme/sage");
+@include meta.load-css("scheme/amethyst");
+@include meta.load-css("scheme/amber");
+@include meta.load-css("scheme/lagoon");
+@include meta.load-css("scheme/navy");
+@include meta.load-css("scheme/wine");
+@include meta.load-css("scheme/coral");
+@include meta.load-css("scheme/midnight");
+@include meta.load-css("scheme/indigo");
+@include meta.load-css("scheme/moss");
+@include meta.load-css("scheme/sky");
+@include meta.load-css("scheme/fuchsia");
+@include meta.load-css("scheme/funky");
+
+@import "bulma/css/bulma.css";
+@import "bulma-steps/dist/css/bulma-steps.min.css";
+@import "bulma-divider/dist/css/bulma-divider.min.css";
+@import "bulma-slider/dist/css/bulma-slider.min.css";
+@import "bulma-checkradio/dist/css/bulma-checkradio.min.css";
+
+@include meta.load-css("custom");

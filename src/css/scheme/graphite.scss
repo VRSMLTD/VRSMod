@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "graphite",
+    $background: #1a1a1a,
+    $text: #e6e6e6,
+    $primary: #b0b0b0,
+    $danger: #ba7881,
+    $dark: true
+);

@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "moss",
+    $background: #1b211a,
+    $text: #ebd5ab,
+    $primary: #8bae66,
+    $danger: #b8474a,
+    $dark: true
+);

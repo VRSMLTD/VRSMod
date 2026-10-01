@@ -1,0 +1,173 @@
+// Shared derivation system for every theme. Each theme file picks exactly
+// 4 colors (background, text, primary/accent, danger) and calls the
+// `theme()` mixin below, which computes every other CSS variable from
+// those 4 with the same formulas every time. This is what keeps 32 themes
+// visually cohesive as a set instead of 32 hand-tuned one-offs, and is why
+// text/border/hover colors can't quietly drift out of sync with each
+// other the way hand-picking ~50 values per file allowed.
+//
+// Deliberately NOT derived, because they're not really "theme" colors at
+// all - see _theme-fixed.scss for the ~16 CSS variables (error banners,
+// game-card badges, .is-success, various shadow/overlay alphas) that were
+// previously copy-pasted identically into every theme file.
+
+@use "sass:color";
+@use "sass:math";
+
+// Picks near-white or near-black, whichever reads better on $bg, using a
+// simple perceptual-brightness approximation (YIQ) rather than full WCAG
+// relative luminance - accurate enough for choosing between two fixed
+// options and much simpler to express in Sass.
+@function contrast-on($bg) {
+    $r: color.channel($bg, "red", $space: rgb);
+    $g: color.channel($bg, "green", $space: rgb);
+    $b: color.channel($bg, "blue", $space: rgb);
+    $yiq: math.div($r * 299 + $g * 587 + $b * 114, 1000);
+    @if $yiq >= 128 {
+        @return #1a1a1a;
+    } @else {
+        @return #ffffff;
+    }
+}
+
+// Steps a color away from $base toward readability: lightens it for a dark
+// theme, darkens it for a light theme, so the same formula produces a
+// sensible border/hover ramp regardless of which direction "brighter"
+// means for that theme.
+@function shade($base, $amount, $dark) {
+    @if $dark {
+        @return color.adjust($base, $lightness: $amount);
+    } @else {
+        @return color.adjust($base, $lightness: -$amount);
+    }
+}
+
+// Rotates a color's hue to derive a second status color from it, so a
+// theme's warning color relates to its danger color the same way across
+// every theme instead of being a 5th hand-picked value.
+@function rotate-hue($color, $degrees) {
+    @return color.adjust($color, $hue: $degrees);
+}
+
+// A white-on-dark-theme / black-on-light-theme overlay wash at a given
+// opacity, used for hover states and placeholder text.
+@function overlay-alpha($dark, $alpha) {
+    @if $dark {
+        @return rgba(255, 255, 255, $alpha);
+    } @else {
+        @return rgba(0, 0, 0, $alpha);
+    }
+}
+
+@mixin theme($slug, $background, $text, $primary, $danger, $dark: true) {
+    $text-secondary: color.mix($text, $background, 62%);
+    $text-strong: shade($text, 4%, $dark);
+    $link: color.mix($primary, $text, 55%);
+    $link-hover: color.mix($primary, $text, 40%);
+    $border: shade($background, 8%, $dark);
+    $border-secondary: shade($background, 5%, $dark);
+    $border-hover: shade($background, 16%, $dark);
+    $border-active: shade($background, 24%, $dark);
+    $code-font-color: color.mix($text-secondary, $primary, 50%);
+    $preview-panel-background: shade($background, 3%, not $dark);
+    $warning: rotate-hue($danger, 40deg);
+    $on-background: contrast-on($background);
+    $on-primary: contrast-on($primary);
+    $on-danger: contrast-on($danger);
+    $on-warning: contrast-on($warning);
+    $overlay-hover: overlay-alpha($dark, 0.08);
+    $placeholder-alpha: overlay-alpha($dark, 0.3);
+    $disabled-placeholder-alpha: overlay-alpha($dark, 0.2);
+
+    :root.html--theme-#{$slug} {
+        --card-expand-shadow-color: rgba(0, 0, 0, 0.5);
+        --card-expand-background-color: rgba(0, 0, 0, 0.2);
+
+        --background: #{$background};
+        --surface: #{shade($background, 3%, $dark)};
+        --text: #{$text};
+        --text-secondary: #{$text-secondary};
+        --scheme-primary: #{$primary};
+        --scheme-danger: #{$danger};
+        --on-primary-text: #{$on-primary};
+        --on-danger-text: #{$on-danger};
+        --link: #{$link};
+        --link-hover: #{$link-hover};
+        --shadow: rgba(0, 0, 0, 0.5);
+        --border: #{$border};
+        --border-secondary: #{$border-secondary};
+        --border-hover: #{$border-hover};
+        --border-active: #{$border-active};
+
+        --text-strong: #{$text-strong};
+
+        --hr-background-color: #{$border};
+        --nav-hr-background-color: #{$border};
+
+        --code-background: #{$border};
+
+        --notification-background-color: #{$border};
+
+        --card-header-color: #{$text-strong};
+        --card-color: #{$text};
+
+        --menu-item-color: #{$text};
+        --menu-item-hover-background-color: #{$border};
+        --menu-item-hover-color: #{$text-strong};
+        --menu-item-active-background-color: #{$overlay-hover};
+        --menu-label-color: #{$text};
+
+        --nav-active-color: rgba(0, 0, 0, 0.34);
+        --nav-active-secondary-color: rgba(120, 120, 120, 0.34);
+        --nav-active-text-color: #{contrast-on($primary)};
+
+        --tabs-link-color: #{$text};
+        --tabs-link-hover-color: #{$text-strong};
+        --tabs-link-active-color: #{$link};
+
+        --input-color: #{$text-strong};
+        --input-placeholder-color: #{$placeholder-alpha};
+        --input-focus-border-color: #{$link};
+        --input-disabled-color: #{$text-secondary};
+        --input-disabled-background-color: #{$border};
+        --input-disabled-border-color: #{$border};
+        --input-disabled-placeholder-color: #{$disabled-placeholder-alpha};
+
+        --pagination-color: #{$text-strong};
+        --pagination-hover-color: #{$text-strong};
+        --pagination-focus-color: #{$text-strong};
+
+        --panel-block-hover-background-color: #{$border};
+
+        --code-font-color: #{$code-font-color};
+        --preview-panel-background-color: #{$preview-panel-background};
+
+        --v2-primary-text-color: #{$text-strong};
+        --v2-secondary-text-color: #{$text};
+
+        --v2-link-text-color: #{$link};
+        --v2-link-active-text-color: #{$text-strong};
+
+        --v2-hero-background-color: #{$primary};
+        --v2-hero-text-color: #{$on-primary};
+        --v2-hero-subtitle-text-color: #{$on-primary};
+
+        --v2-warning-background-color: #{$warning};
+        --v2-warning-text-color: #{$on-warning};
+        --v2-warning-subtitle-text-color: #{$on-warning};
+
+        --v2-table-row-background-color: #{$border-secondary};
+        --v2-table-row-alt-background-color: #{$border};
+        --v2-table-row-text-color: #{$text-strong};
+        --v2-table-row-border-color: #{$border-hover};
+
+        --v2-active-tag-background-color: #{$border};
+        --v2-active-tag-color: #{$text-strong};
+
+        --v2-inactive-tag-background-color: #{$primary};
+        --v2-inactive-tag-color: #{$on-primary};
+
+        --v2-active-menu-item-color: #{$on-background};
+        --v2-inactive-menu-item-color: #{$text};
+    }
+}

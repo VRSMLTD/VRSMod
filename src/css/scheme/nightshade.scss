@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "nightshade",
+    $background: #282a36,
+    $text: #f8f8f2,
+    $primary: #bd93f9,
+    $danger: #db5769,
+    $dark: true
+);

@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "navy",
+    $background: #0c2b4e,
+    $text: #f4f4f4,
+    $primary: #1d546c,
+    $danger: #ad4550,
+    $dark: true
+);

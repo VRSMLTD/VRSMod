@@ -1,0 +1,16 @@
+@use "@fontsource/plus-jakarta-sans/400.css" as *;
+@use "@fontsource/plus-jakarta-sans/500.css" as *;
+@use "@fontsource/plus-jakarta-sans/600.css" as *;
+@use "@fontsource/plus-jakarta-sans/700.css" as *;
+
+body {
+    font-family: "Plus Jakarta Sans", BlinkMacSystemFont, -apple-system, "Segoe UI", "Roboto", "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+}
+
+html {
+    //overflow-y: hidden !important;
+}
+
+strong {
+    color: var(--text, #363636);
+}

@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "snackbear",
+    $background: #f5c2d1,
+    $text: #4a3038,
+    $primary: #d6558a,
+    $danger: #be5a67,
+    $dark: false
+);

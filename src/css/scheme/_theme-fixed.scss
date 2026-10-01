@@ -1,0 +1,50 @@
+// These variables were previously copy-pasted identically into every one
+// of the 18 theme files (confirmed by diffing them against each other) -
+// they don't actually vary per theme at all, so they're declared once here
+// on a plain :root instead, and no longer part of the theme() mixin.
+
+:root {
+    --ecosystem-update-error-text: #ffc5cf;
+    --ecosystem-update-error-background: #4a1f2a;
+    --ecosystem-update-error-border: #6d3240;
+
+    --game-card-new-badge-background: rgba(18, 22, 45, 0.85);
+    --game-card-new-badge-border: rgba(100, 140, 255, 0.3);
+
+    --card-concern-background-color: rgba(177, 120, 89, 0.66);
+    --card-concern-secondary-background-color: #7e5442;
+    --notification-concern-background-color: #9e512e;
+    --notification-concern-text-color: #eaeaea;
+}
+
+.is-success {
+    background-color: #29a052 !important;
+}
+
+// These used to be duplicated per-theme (identical structure, only the
+// hardcoded hex values differed) inside the theme() mixin. Now that the
+// mixin also emits --scheme-danger/--on-primary-text/--on-danger-text as
+// variables, one global rule set referencing them covers every theme,
+// including runtime-generated custom themes that only set variables and
+// have no generated stylesheet of their own.
+body {
+    color: var(--text);
+}
+
+.is-primary {
+    background-color: var(--scheme-primary) !important;
+}
+
+.is-info {
+    background-color: var(--scheme-primary) !important;
+    color: var(--on-primary-text) !important;
+}
+
+.is-link {
+    background-color: var(--scheme-primary) !important;
+}
+
+.is-danger {
+    background-color: var(--scheme-danger) !important;
+    color: var(--on-danger-text) !important;
+}

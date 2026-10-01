@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "amber",
+    $background: #4d2a00,
+    $text: #f9e6a8,
+    $primary: #f2a900,
+    $danger: #b8474a,
+    $dark: true
+);

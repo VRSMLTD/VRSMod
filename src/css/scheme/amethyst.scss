@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "amethyst",
+    $background: #ffdbfd,
+    $text: #2c1f4a,
+    $primary: #6367ff,
+    $danger: #a8474f,
+    $dark: false
+);

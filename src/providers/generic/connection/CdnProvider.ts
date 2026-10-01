@@ -1,0 +1,92 @@
+import R2Error from '../../../model/errors/R2Error';
+import ThunderstoreMod from '../../../model/ThunderstoreMod';
+import { getAxiosWithTimeouts } from '../../../utils/HttpUtils';
+import { addOrReplaceSearchParams, replaceHost } from '../../../utils/UrlUtils';
+import { CdnDefinition, getCdns } from '../../../providers/cdn/CdnHostList';
+
+const TEST_FILE = "healthz";
+
+const CONNECTION_ERROR = new R2Error(
+    "Can't reach content delivery networks",
+    `All Thunderstore CDNs seem to be currently unreachable from
+     this computer. You can still use the mod manager, but
+     downloading mods will not work.`,
+    `Test another internet connection, if available. For example
+     using a VPN or connecting to a mobile hotspot might solve the
+     issue.`
+);
+
+export default class CdnProvider {
+    private static axios = getAxiosWithTimeouts(5000, 5000);
+    private static preferredCdn: CdnDefinition | undefined;
+
+    public static get current() {
+        const cdns = getCdns();
+        const i = cdns.findIndex((cdn) => cdn.host === CdnProvider.preferredCdn?.host);
+        return {
+            label: [-1, 0].includes(i) ? "Main CDN" : `Mirror #${i}`,
+            url: CdnProvider.preferredCdn?.host
+        };
+    }
+
+    public static async checkCdnConnection() {
+        const cdns = getCdns();
+        const headers = {
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        };
+        const params = {"disableCache": new Date().getTime()};
+        let res;
+
+        for await (const cdn of cdns) {
+            const url = `${cdn.protocol}://${cdn.host}/${TEST_FILE}`;
+
+            try {
+                res = await CdnProvider.axios.get(url, {headers, params});
+            } catch (e) {
+                continue;
+            }
+
+            if (res.status === 200) {
+                CdnProvider.preferredCdn = cdn;
+                return;
+            }
+        };
+
+        throw CONNECTION_ERROR;
+    }
+
+    public static replaceCdnHost(url: string) {
+        return CdnProvider.preferredCdn
+            ? replaceHost(url, CdnProvider.preferredCdn)
+            : url;
+    }
+
+    public static addCdnQueryParameter(url: string) {
+        return CdnProvider.preferredCdn
+            ? addOrReplaceSearchParams(url, `cdn=${CdnProvider.preferredCdn.host}`)
+            : url;
+    }
+
+    // Thunderstore's CDN mirror swap only makes sense for Thunderstore's own
+    // hosted icons. Applying it to a Hexium icon URL just replaces the host
+    // with one of Thunderstore's mirrors, turning a working image into a 404.
+    public static getModIconUrl(mod: ThunderstoreMod): string {
+        if (mod.getSource() === 'hexium') {
+            return mod.getIcon();
+        }
+        return CdnProvider.replaceCdnHost(mod.getIcon());
+    }
+
+    public static togglePreferredCdn() {
+        const cdns: CdnDefinition[] = getCdns();
+        let currentIndex = cdns.findIndex((cdn) => cdn.host === CdnProvider.preferredCdn?.host);
+
+        if (currentIndex === -1) {
+            currentIndex = 0;
+        }
+
+        CdnProvider.preferredCdn = cdns[currentIndex + 1] || cdns[0];
+    }
+}

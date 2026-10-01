@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "fuchsia",
+    $background: #170a1f,
+    $text: #f7e8f5,
+    $primary: #f375c2,
+    $danger: #c0392b,
+    $dark: true
+);

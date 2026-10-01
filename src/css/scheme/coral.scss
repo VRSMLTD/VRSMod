@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "coral",
+    $background: #ffcdb2,
+    $text: #4a2f35,
+    $primary: #b5828c,
+    $danger: #b8474a,
+    $dark: false
+);

@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "terracotta",
+    $background: #282828,
+    $text: #ebdbb2,
+    $primary: #d65d0e,
+    $danger: #ba2a3d,
+    $dark: true
+);

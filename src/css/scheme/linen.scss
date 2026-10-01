@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "linen",
+    $background: #f2f2f0,
+    $text: #232320,
+    $primary: #6b6a5f,
+    $danger: #85454d,
+    $dark: false
+);

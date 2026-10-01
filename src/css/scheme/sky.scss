@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "sky",
+    $background: #fff9d2,
+    $text: #1f3a52,
+    $primary: #8cc0eb,
+    $danger: #b8474a,
+    $dark: false
+);

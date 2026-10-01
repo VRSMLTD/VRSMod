@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "paper",
+    $background: #ffffff,
+    $text: #4a4a4a,
+    $primary: #3273dc,
+    $danger: #c44a5a,
+    $dark: false
+);

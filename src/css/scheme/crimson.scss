@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "crimson",
+    $background: #1d1616,
+    $text: #eeeeee,
+    $primary: #d84040,
+    $danger: #8e1616,
+    $dark: true
+);

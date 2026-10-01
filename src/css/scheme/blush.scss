@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "blush",
+    $background: #faf3f5,
+    $text: #4a3840,
+    $primary: #d97ca0,
+    $danger: #b95f6b,
+    $dark: false
+);

@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "chocolate-strawberry",
+    $background: #161213,
+    $text: #f2c9db,
+    $primary: #e2196b,
+    $danger: #c63549,
+    $dark: true
+);

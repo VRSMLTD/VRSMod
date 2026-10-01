@@ -1,0 +1,53 @@
+// bulma-switch ships as precompiled CSS imported directly in App.vue (a JS
+// import, not part of this Sass chain), so there's no variable to override
+// and no guarantee this partial's CSS ends up after it in the final bundle.
+// Every selector here is prefixed with `body` purely to win on specificity
+// regardless of load order, not for any layout reason.
+//
+// Its default track/thumb are both squared-off (radius 4px) and the "on"
+// state is hardcoded to Bulma's own info blue, completely ignoring the
+// active theme's accent color. This re-skins every switch in the app: a
+// pill-shaped track, a circular thumb, and a theme-following "on" color,
+// the same treatment _button.scss and _input.scss already give buttons
+// and inputs.
+
+body .switch[type="checkbox"] {
+    &+label {
+        &::before {
+            border-radius: 999px;
+            background: var(--border-active, #b5b5b5);
+        }
+
+        &::after {
+            border-radius: 50%;
+        }
+    }
+
+    &.is-small+label,
+    &.is-medium+label,
+    &.is-large+label {
+        &::before {
+            border-radius: 999px;
+        }
+
+        &::after {
+            border-radius: 50%;
+        }
+    }
+
+    &.is-info {
+        &:checked+label::before {
+            background: var(--scheme-primary, #3e8ed0);
+        }
+
+        &.is-outlined:checked+label {
+            &::before {
+                border-color: var(--scheme-primary, #3e8ed0) !important;
+            }
+
+            &::after {
+                background: var(--scheme-primary, #3e8ed0);
+            }
+        }
+    }
+}

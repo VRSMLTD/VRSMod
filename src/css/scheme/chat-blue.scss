@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "chat-blue",
+    $background: #313338,
+    $text: #f2f3f5,
+    $primary: #5865f2,
+    $danger: #d85a6b,
+    $dark: true
+);

@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "wine",
+    $background: #641b2e,
+    $text: #fbdb93,
+    $primary: #be5b50,
+    $danger: #c0392b,
+    $dark: true
+);

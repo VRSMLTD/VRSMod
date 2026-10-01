@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "forest",
+    $background: #18230f,
+    $text: #e8ede6,
+    $primary: #1f7d53,
+    $danger: #b3453f,
+    $dark: true
+);

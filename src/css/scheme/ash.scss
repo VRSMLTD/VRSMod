@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "ash",
+    $background: #1a1a1a,
+    $text: #e6e6e6,
+    $primary: #8a8a7c,
+    $danger: #ab5b65,
+    $dark: true
+);

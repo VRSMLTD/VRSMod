@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "lagoon",
+    $background: #005461,
+    $text: #f4f4f4,
+    $primary: #00b7b5,
+    $danger: #b8474a,
+    $dark: true
+);

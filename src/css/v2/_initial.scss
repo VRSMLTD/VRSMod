@@ -1,0 +1,66 @@
+:root {
+    --v2-primary-text-color: #222;
+    --v2-secondary-text-color: #333;
+
+    --v2-link-text-color: #3ba5fd;
+    --v2-link-active-text-color: #222;
+
+    --v2-hero-background-color: #3f8ecf;
+    --v2-hero-text-color: white;
+    --v2-hero-subtitle-text-color: #e4f4fa;
+
+    --v2-warning-background-color: #c1a564;
+    --v2-warning-text-color: #222;
+    --v2-warning-subtitle-text-color: #272727;
+
+    --v2-table-row-background-color: #ebf0f1;
+    --v2-table-row-alt-background-color: #dee2e3;
+    --v2-table-row-text-color: var(--v2-primary-text-color);
+    --v2-table-row-border-color: #b3b3b3;
+
+    --v2-active-tag-background-color: #f3f3f3;
+    --v2-active-tag-color: #222;
+
+    --v2-inactive-tag-background-color: #485fc7;
+    --v2-inactive-tag-color: white;
+
+    --v2-active-menu-item-color: white;
+    --v2-inactive-menu-item-color: #222;
+
+    --input-placeholder-color: #b5b5b5;
+
+    --game-card-new-badge-background: rgba(18, 22, 45, 0.85);
+    --game-card-new-badge-border: rgba(100, 140, 255, 0.3);
+}
+
+html[class="html--dark"] {
+    --v2-primary-text-color: white;
+    --v2-secondary-text-color: #aaacb6;
+
+    --v2-link-text-color: #3ba5fd;
+    --v2-link-active-text-color: white;
+
+    --v2-hero-background-color: #3f8ecf;
+    --v2-hero-text-color: white;
+    --v2-hero-subtitle-text-color: #e4f4fa;
+
+    --v2-warning-background-color: #ffe08a;
+    --v2-warning-text-color: #222;
+    --v2-warning-subtitle-text-color: #272727;
+
+    --v2-table-row-background-color: #171d27;
+    --v2-table-row-alt-background-color: #1d2532;
+    --v2-table-row-text-color: var(--v2-primary-text-color);
+    --v2-table-row-border-color: #313c4e;
+
+    --v2-active-tag-background-color: #f3f3f3;
+    --v2-active-tag-color: #222;
+
+    --v2-inactive-tag-background-color: #485fc7;
+    --v2-inactive-tag-color: white;
+
+    --v2-active-menu-item-color: white;
+    --v2-inactive-menu-item-color: #bdcbdb;
+
+    --input-placeholder-color: #ededed;
+}

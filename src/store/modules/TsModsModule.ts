@@ -1,0 +1,511 @@
+import { markRaw } from 'vue';
+import { ActionTree, GetterTree, MutationTree } from 'vuex';
+
+import { State as RootState } from '../index';
+import ManifestV2 from '../../model/ManifestV2';
+import R2Error from "../../model/errors/R2Error";
+import ThunderstoreMod from '../../model/ThunderstoreMod';
+import VersionNumber from '../../model/VersionNumber';
+import CdnProvider from '../../providers/generic/connection/CdnProvider';
+import * as PackageDb from '../../r2mm/manager/PackageDexieStore';
+import { isEmptyArray, isStringArray } from '../../utils/ArrayUtils';
+import { retry } from '../../utils/Common';
+import { Deprecations } from '../../utils/Deprecations';
+import { fetchAndProcessBlobFile, getAxiosWithTimeouts, isNetworkError } from '../../utils/HttpUtils';
+import { transformPackageUrl } from '../../providers/cdn/PackageUrlTransformer';
+import HexiumClient from '../../providers/generic/hexium/HexiumClient';
+import { isHexiumSupportedForCommunity } from '../../providers/generic/hexium/HexiumSupportedGames';
+import ManagerSettings from '../../r2mm/manager/ManagerSettings';
+
+export interface CachedMod {
+    tsMod: ThunderstoreMod | undefined;
+    isLatest: boolean;
+}
+
+export interface State {
+    activeGameCacheStatus: string|undefined;
+    cache: Map<string, CachedMod>;
+    deprecated: Map<string, boolean>;
+    exclusions: Set<string>;
+    isThunderstoreModListUpdateInProgress: boolean;
+    mods: ThunderstoreMod[];
+    modsLastUpdated?: Date | undefined;
+    thunderstoreModListUpdateError: Error|undefined;
+    thunderstoreModListUpdateStatus: string;
+}
+
+type ProgressCallback = (progress: number) => void;
+type PackageListChunk = {full_name: string}[];
+export type PackageListIndex = {
+    content: string[],
+    hash: string,
+    isLatest: boolean
+};
+
+function isPackageListChunk(value: unknown): value is PackageListChunk {
+    return Array.isArray(value) && (
+        !value.length || typeof value[0].full_name === "string"
+    );
+}
+
+const EXCLUSIONS = 'https://raw.githubusercontent.com/ebkr/r2modmanPlus/master/modExclusions.md';
+const PARTIAL_UPDATE_ERROR = 'Failed to fully refresh the online mod list. Some mod versions might be unavailable.';
+
+/**
+ * For dealing with mods listed in communities, i.e. available through
+ * the Thunderstore API. Mods received from the API are stored in
+ * IndexedDB (via Dexie). For performance they're also stored in memory
+ * by this Vuex store module.
+ */
+export const TsModsModule = {
+    namespaced: true,
+
+    state: (): State => ({
+        /*** Does the active game have a mod list stored in IndexedDB? */
+        activeGameCacheStatus: undefined,
+        cache: new Map<string, CachedMod>(),
+        deprecated: new Map<string, boolean>(),
+        /*** Packages available through API that should be ignored by the manager */
+        exclusions: new Set<string>(),
+        /*** Mod list is updated from the API automatically and by user action */
+        isThunderstoreModListUpdateInProgress: false,
+        /*** All mods available through API for the current active game */
+        mods: [],
+        /*** When was the mod list last refreshed from the API? */
+        modsLastUpdated: undefined,
+        /*** Error shown on UI after mod list refresh fails */
+        thunderstoreModListUpdateError: undefined,
+        /*** Status shown on UI during mod list refresh */
+        thunderstoreModListUpdateStatus: ''
+    }),
+
+    getters: <GetterTree<State, RootState>>{
+        /** Vue components mostly process mods in ManifestV2 format,
+         *  but sometimes need access to ThunderstoreMod format and
+         *  related data too. Since filtering the whole mods list every
+         *  time this happens slows down the LocalModList, cache the
+         *  data in a Map.
+         */
+        cachedMod: (state) => (mod: ManifestV2): CachedMod => {
+            const cacheKey = `${mod.getName()}-${mod.getVersionNumber()}`;
+            return state.cache.get(cacheKey) as CachedMod;
+        },
+
+        /*** Categories used by any mod listed in the community */
+        categories(state) {
+            const categories = Array.from(
+                new Set(
+                    state.mods.map((mod) => mod.getCategories()).flat()
+                )
+            );
+            categories.sort();
+            return categories;
+        },
+
+        /*** Is the version of a mod defined by ManifestV2 the newest version? */
+        isLatestVersion: (_state, getters) => (mod: ManifestV2): boolean => {
+            return getters.cachedMod(mod)?.isLatest || false;
+        },
+
+        /*** Was the last successful mod list update more than an hour ago? */
+        isModListOutdated(state) {
+            return state.modsLastUpdated instanceof Date
+                && (Date.now() - state.modsLastUpdated.getTime()) > (1000 * 60 * 60);
+        },
+
+        /*** A more concise version of the error message */
+        conciseThunderstoreModListUpdateErrorMessage(state): string|undefined {
+            if (!state.thunderstoreModListUpdateError) {
+                return undefined;
+            }
+
+            let conciseError = "Failed to load mod list";
+            if (isNetworkError(state.thunderstoreModListUpdateError)) {
+                conciseError = "Failed to fully refresh the online mod list due to network error"
+            } else if (state.thunderstoreModListUpdateError.name === PARTIAL_UPDATE_ERROR) {
+                conciseError = "Failed to fully refresh the online mod list";
+            }
+            return conciseError;
+        },
+
+        /*** Return ThunderstoreMod representation of a ManifestV2 */
+        tsMod: (_state, getters) => (mod: ManifestV2): ThunderstoreMod | undefined => {
+            return getters.cachedMod(mod)?.tsMod;
+        },
+
+        undeprecatedModCount(state) {
+            return [...state.deprecated].filter(([_, isDeprecated]) => !isDeprecated).length;
+        }
+    },
+
+    mutations: <MutationTree<State>>{
+        reset(state: State) {
+            state.activeGameCacheStatus = undefined;
+            state.cache = new Map<string, CachedMod>();
+            state.deprecated = new Map<string, boolean>();
+            state.mods = [];
+            state.modsLastUpdated = undefined;
+            state.thunderstoreModListUpdateError = undefined;
+            state.thunderstoreModListUpdateStatus = '';
+        },
+        clearModCache(state) {
+            state.cache.clear();
+        },
+        finishThunderstoreModListUpdate(state) {
+            state.isThunderstoreModListUpdateInProgress = false;
+            state.thunderstoreModListUpdateStatus = '';
+        },
+        setActiveGameCacheStatus(state, status: string|undefined) {
+            state.activeGameCacheStatus = status;
+        },
+        setMods(state, payload: ThunderstoreMod[]) {
+            // The mod list is large and immutable, replaced wholesale.
+            // markRaw keeps Vue from deep-proxying every entry, which absolutely dominates
+            // the load memory and time complexity.
+            state.mods = markRaw(payload);
+        },
+        setModsLastUpdated(state, payload: Date|undefined) {
+            state.modsLastUpdated = payload;
+        },
+        setExclusions(state, payload: string|string[]) {
+            const exclusions_ = Array.isArray(payload) ? payload : payload.split('\n');
+            state.exclusions = new Set(exclusions_.map((e) => e.trim()).filter(Boolean));
+        },
+        setThunderstoreModListUpdateError(state, error: Error) {
+            state.thunderstoreModListUpdateError = error instanceof Error ? error : new Error(error);
+        },
+        setThunderstoreModListUpdateStatus(state, status: string) {
+            state.thunderstoreModListUpdateStatus = status;
+        },
+        startThunderstoreModListUpdate(state) {
+            state.isThunderstoreModListUpdateInProgress = true;
+            state.thunderstoreModListUpdateError = undefined;
+        },
+        updateDeprecated(state, allMods: ThunderstoreMod[]) {
+            state.deprecated = Deprecations.getDeprecatedPackageMap(allMods);
+        },
+        prewarmCacheMod(state: State, mods: ThunderstoreMod[]) {
+            const localState = new Map<string, CachedMod>(state.cache.entries());
+            const modsByFullName = new Map(state.mods.map((m) => [m.getFullName(), m]));
+            mods.forEach(mod => {
+                const cacheKey = `${mod.getName()}-${mod.getVersionNumber()}`;
+
+                if (localState.get(cacheKey) === undefined) {
+                    const tsMod = modsByFullName.get(mod.getName());
+                    if (tsMod === undefined) {
+                        localState.set(cacheKey, {tsMod: undefined, isLatest: true});
+                    } else {
+                        const latestVersionNumber = new VersionNumber(tsMod.getLatestVersion());
+                        const isLatest = mod.getVersionNumber().isEqualOrNewerThan(latestVersionNumber);
+                        localState.set(cacheKey, {tsMod, isLatest});
+                    }
+                }
+            });
+            state.cache = localState;
+        }
+    },
+
+    actions: <ActionTree<State, RootState>>{
+        /**
+         * Full update process of the mod list, to be used after
+         * passing the splash screen.
+         */
+        async syncPackageList({commit, dispatch, state, rootGetters}): Promise<void> {
+            if (state.isThunderstoreModListUpdateInProgress || rootGetters['download/activeDownloadCount'] > 0) {
+                return;
+            }
+
+            commit('startThunderstoreModListUpdate');
+
+            try {
+                commit('setThunderstoreModListUpdateStatus', 'Checking for mod list updates from Thunderstore...');
+                const packageListIndex = await dispatch('fetchPackageListIndex');
+
+                // If the package list is up to date, only update the timestamp. Otherwise,
+                // fetch the new one and store it into IndexedDB.
+                if (packageListIndex.isLatest) {
+                    await dispatch('cacheIndexHash', packageListIndex.hash);
+                } else {
+                    await dispatch(
+                        'fetchAndCachePackageListChunks',
+                        {
+                            packageListIndex,
+                            progressCallback: (progress: number) => commit(
+                                'setThunderstoreModListUpdateStatus',
+                                `Loading latest mod list from Thunderstore: ${progress}%`
+                            ),
+                        },
+                    );
+                }
+
+                // If the package list was up to date and the mod list is already loaded to
+                // Vuex, just update the timestamp. Otherwise, load the list from IndexedDB
+                // to Vuex. This needs to be done even if the index hasn't updated when the
+                // mod list in Vuex is empty, as this indicates an error state and otherwise
+                // the user would be stuck with empty list until a new index hash is
+                // available via the API.
+                if (packageListIndex.isLatest && state.mods.length > 0) {
+                    await dispatch('updateModsLastUpdated');
+                } else {
+                    commit('setThunderstoreModListUpdateStatus', 'Processing the mod list...');
+                    await dispatch('updateMods');
+                    commit('setThunderstoreModListUpdateStatus', 'Almost done...');
+                    await dispatch('profile/tryLoadModListFromDisk', null, {root: true});
+                }
+
+                // Hexium is an optional, opt-in second source layered on top of
+                // Thunderstore. A failure here should never break the main mod
+                // list, so it's dispatched after everything above has already
+                // succeeded, and swallows its own errors internally.
+                await dispatch('mergeHexiumMods');
+            } catch (e) {
+                commit('setThunderstoreModListUpdateError', e);
+            } finally {
+                commit('setActiveGameCacheStatus', undefined);
+                commit('finishThunderstoreModListUpdate');
+            }
+        },
+
+        async fetchPackageListIndex({rootState}): Promise<PackageListIndex> {
+            const packageIndexUrl = transformPackageUrl(rootState.activeGame.thunderstoreUrl);
+            const indexUrl = CdnProvider.addCdnQueryParameter(packageIndexUrl);
+            const options = {attempts: 5, interval: 2000, throwLastErrorAsIs: true};
+            const index = await retry(() => fetchAndProcessBlobFile(indexUrl, {computeHash: true}), options);
+
+            if (!isStringArray(index.content)) {
+                throw new Error('Received invalid chunk index from API');
+            }
+            if (isEmptyArray(index.content)) {
+                throw new Error('Received empty chunk index from API');
+            }
+            if (typeof index.hash !== 'string') {
+                throw new Error('Failed to compute hash for the chunk index');
+            }
+
+            const community = rootState.activeGame.internalFolderName;
+            const isLatest = await PackageDb.isLatestPackageListIndex(community, index.hash);
+            return {content: index.content, hash: index.hash, isLatest};
+        },
+
+        async fetchAndCachePackageListChunks(
+            {commit, dispatch, rootState},
+            {packageListIndex, progressCallback}: {packageListIndex: PackageListIndex, progressCallback?: ProgressCallback},
+        ): Promise<boolean> {
+            const chunkCount = packageListIndex.content.length;
+            let completed = 0;
+            let successes = 0;
+            const fetchedFullNames = new Set<string>();
+            const updateProgress = () => progressCallback && progressCallback(Math.floor((completed / chunkCount) * 100));
+
+            for (const chunkUrl of packageListIndex.content) {
+                try {
+                    const fullNames: string[] = await dispatch('fetchAndCachePackageListChunk', chunkUrl);
+                    fullNames.forEach((name) => fetchedFullNames.add(name));
+                    successes++;
+                } catch (e) {
+                    console.error('Processing package list chunk failed.', e);
+                } finally {
+                    completed++;
+                    updateProgress();
+                }
+            }
+
+            // A partial fetched set would prune still-valid packages, and caching
+            // the hash would block retries until the API updates its index hash.
+            if (successes === chunkCount) {
+                await dispatch('cacheIndexHash', packageListIndex.hash);
+                await PackageDb.pruneRemovedMods(rootState.activeGame.internalFolderName, fetchedFullNames);
+            } else {
+                commit('setThunderstoreModListUpdateError',
+                    new R2Error(
+                        PARTIAL_UPDATE_ERROR,
+                        `Only ${successes} out of ${chunkCount} parts of the list were updated successfully`,
+                    )
+                );
+            }
+
+            return successes === chunkCount;
+        },
+
+        async fetchAndCachePackageListChunk({rootState, state}, chunkUrl: string): Promise<string[]> {
+            const url = CdnProvider.replaceCdnHost(chunkUrl);
+            const options = {throwLastErrorAsIs: true};
+            const {content: chunk} = await retry(() => fetchAndProcessBlobFile(url), options);
+
+            if (!isPackageListChunk(chunk)) {
+                throw new Error(`Received invalid chunk from URL "${url}"`);
+            }
+
+            const filtered = chunk.filter((pkg) => !state.exclusions.has(pkg.full_name));
+            const community = rootState.activeGame.internalFolderName;
+            await PackageDb.upsertPackageListChunk(community, filtered);
+            return filtered.map((pkg) => pkg.full_name);
+        },
+
+        async gameHasCachedModList({rootState}): Promise<boolean> {
+            const updated = await PackageDb.getLastPackageListUpdateTime(rootState.activeGame.internalFolderName);
+            return updated !== undefined;
+        },
+
+        async generateTroubleshootingString({state}): Promise<string> {
+            return `${state.mods.length} mods, updated ${state.modsLastUpdated || 'never'}`;
+        },
+
+        async getActiveGameCacheStatus({commit, state, rootState}): Promise<string> {
+            if (state.isThunderstoreModListUpdateInProgress) {
+                return "Online mod list is currently updating, please wait for the operation to complete";
+            }
+
+            // Only check the status once, as this is used in the settings
+            // where the value is polled on one second intervals.
+            if (state.activeGameCacheStatus === undefined) {
+                let status = '';
+                try {
+                    status = (await PackageDb.hasEntries(rootState.activeGame.internalFolderName))
+                        ? `${rootState.activeGame.displayName} has a local copy of online mod list`
+                        : `${rootState.activeGame.displayName} has no local copy stored`;
+                } catch (e) {
+                    console.error(e);
+                    status = 'Error occurred while checking mod list status';
+                }
+
+                commit('setActiveGameCacheStatus', status);
+            }
+
+            return state.activeGameCacheStatus || 'Unknown status';
+        },
+
+        async resetActiveGameCache({commit, rootState, state}) {
+            if (state.isThunderstoreModListUpdateInProgress) {
+                return;
+            }
+
+            commit('startThunderstoreModListUpdate');
+            const community = rootState.activeGame.internalFolderName;
+
+            try {
+                commit('setThunderstoreModListUpdateStatus', 'Resetting mod list cache...');
+                await PackageDb.resetCommunity(community);
+                commit('setModsLastUpdated', undefined);
+            } finally {
+                commit('setActiveGameCacheStatus', undefined);
+                commit('finishThunderstoreModListUpdate');
+            }
+        },
+
+        async updateExclusions({commit}) {
+            // Read exclusion list from a bundled file to have some values available ASAP.
+            const exclusionList: {exclusions: string[]} = await import('../../../modExclusions.json');
+            commit('setExclusions', exclusionList.exclusions);
+
+            const timeout = 20000;
+            const options = {attempts: 5, interval: 1000, throwLastErrorAsIs: true};
+
+            // Check for exclusion list updates from online.
+            try {
+                const axios = getAxiosWithTimeouts(timeout, timeout);
+                const response = await retry(() => axios.get(EXCLUSIONS), options);
+
+                if (typeof response.data === 'string') {
+                    commit('setExclusions', response.data);
+                } else {
+                    throw new Error(`Received invalid exclusion list response from API: ${response.data}`);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        },
+
+        async updateMods({commit, dispatch, rootState}) {
+            const modList = await PackageDb.getPackagesAsThunderstoreMods(rootState.activeGame.internalFolderName);
+            commit('setMods', modList);
+            commit('updateDeprecated', modList);
+            commit('clearModCache');
+            await dispatch('updateModsLastUpdated');
+        },
+
+        async updateModsLastUpdated({commit, rootState}) {
+            const updated = await PackageDb.getLastPackageListUpdateTime(rootState.activeGame.internalFolderName);
+            commit('setModsLastUpdated', updated);
+        },
+
+        async mergeHexiumMods({commit, dispatch, state, rootState}) {
+            const community = rootState.activeGame.internalFolderName;
+
+            if (!isHexiumSupportedForCommunity(community)) {
+                return;
+            }
+
+            let hexiumEnabled = false;
+            try {
+                const settings = await ManagerSettings.getSingleton(rootState.activeGame);
+                hexiumEnabled = settings.getContext().global.hexiumEnabled;
+            } catch (e) {
+                console.error('Failed to read Hexium setting', e);
+                return;
+            }
+
+            if (!hexiumEnabled) {
+                return;
+            }
+
+            let hexiumMods: ThunderstoreMod[];
+            try {
+                hexiumMods = await HexiumClient.fetchMods(community);
+            } catch (e) {
+                // Hexium being unreachable should never take down the rest
+                // of the mod list — just keep what Thunderstore already gave us.
+                console.error('Failed to fetch mods from Hexium', e);
+                return;
+            }
+
+            // Drop any prior Hexium entries before merging fresh ones in,
+            // so a mod removed from Hexium since the last sync disappears
+            // rather than lingering forever.
+            const thunderstoreOnly = state.mods.filter((mod) => mod.getSource() !== 'hexium');
+            const byFullName = new Map(thunderstoreOnly.map((mod) => [mod.getFullName(), mod]));
+
+            for (const hexiumMod of hexiumMods) {
+                const existing = byFullName.get(hexiumMod.getFullName());
+
+                // Thunderstore wins when the same mod exists on both, unless
+                // it's deprecated/frozen there while still active on Hexium —
+                // in that case the still-maintained Hexium version wins.
+                if (!existing || existing.isDeprecated()) {
+                    byFullName.set(hexiumMod.getFullName(), hexiumMod);
+                }
+            }
+
+            const finalMods = Array.from(byFullName.values());
+            commit('setMods', finalMods);
+
+            // A mod can be flagged deprecated from stale Thunderstore data even
+            // after it's alive and well on Hexium. Recompute deprecation status
+            // against the full merged list so a Hexium-sourced mod isn't hidden
+            // by the "hide deprecated packages" filter just because of its old
+            // Thunderstore history.
+            commit('updateDeprecated', finalMods);
+
+            // rootState.profile.modList may not reflect the active profile yet
+            // if this runs on the "already up to date" fast path, which skips
+            // the mod-list reload that normally accompanies a merge. Refresh
+            // it before using it below so a profile switch racing this merge
+            // doesn't prewarm the cache from a stale or empty list.
+            await dispatch('profile/tryLoadModListFromDisk', null, {root: true});
+
+            // The "is this installed mod up to date" cache is built from
+            // whatever state.mods looked like the last time the installed
+            // list refreshed, which can happen before this merge ever runs.
+            // Clear it and rebuild so update-checking compares against
+            // Hexium's actual version too, not a stale Thunderstore-only
+            // snapshot left behind by that earlier prewarm.
+            commit('clearModCache');
+            commit('prewarmCacheMod', rootState.profile.modList);
+        },
+
+        async cacheIndexHash({rootState}, indexHash: string) {
+            const community = rootState.activeGame.internalFolderName;
+            await PackageDb.setLatestPackageListIndex(community, indexHash);
+        },
+    }
+}

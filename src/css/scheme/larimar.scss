@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "larimar",
+    $background: #1e6c94,
+    $text: #eef6ee,
+    $primary: #d6e9d9,
+    $danger: #ba7881,
+    $dark: true
+);

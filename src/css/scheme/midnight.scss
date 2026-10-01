@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "midnight",
+    $background: #000000,
+    $text: #f0f0f0,
+    $primary: #e8600d,
+    $danger: #c0392b,
+    $dark: true
+);

@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "pastel-mocha",
+    $background: #1e1e2e,
+    $text: #cdd6f4,
+    $primary: #cba6f7,
+    $danger: #d65c6c,
+    $dark: true
+);

@@ -1,0 +1,11 @@
+[tools]
+node = "22"
+"npm:corepack" = { version = "latest", postinstall = "corepack enable" }
+
+[tasks.dev]
+description = "Start in dev mode"
+run = "pnpm run dev"
+
+[tasks.typecheck]
+description = "Ensure that the app is appropriately typed"
+run = "pnpm typecheck"

@@ -1,0 +1,363 @@
+<script lang="ts" setup>
+import { ExpandableCard, ExternalLink } from '../../all';
+import DonateButton from '../../buttons/DonateButton.vue';
+import DonateIconButton from '../../buttons/DonateIconButton.vue';
+import R2Error from '../../../model/errors/R2Error';
+import ManifestV2 from '../../../model/ManifestV2';
+import VersionNumber from '../../../model/VersionNumber';
+import { LogSeverity } from '../../../providers/ror2/logging/LoggerProvider';
+import Dependants from '../../../r2mm/mods/Dependants';
+import { useModIcon } from '../../composables/ModIconComposable';
+import { valueToReadableDate } from '../../../utils/DateUtils';
+import { splitToNameAndVersion, InstallMode } from '../../../utils/DependencyUtils';
+import { computed, ref } from 'vue';
+import { getStore } from '../../../providers/generic/store/StoreProvider';
+import { State } from '../../../store';
+import { UnsatisfiedDependencies } from '../../../store/modules/ProfileModule';
+import ThunderstoreMod from "../../../model/ThunderstoreMod";
+import ThunderstoreVersion from "../../../model/ThunderstoreVersion";
+import ThunderstoreCombo from "../../../model/ThunderstoreCombo";
+import * as PackageDb from "../../../r2mm/manager/PackageDexieStore";
+import ProfileModList from "../../../r2mm/mods/ProfileModList";
+import { useConcerningPackageComposable } from '@r2/components/composables/ConcerningPackageComposable';
+import { useModManagementComposable } from '@r2/components/composables/ModManagementComposable';
+import InteractionProvider from '../../../providers/ror2/system/InteractionProvider';
+
+const store = getStore<State>();
+
+type LocalModCardProps = {
+    mod: ManifestV2;
+    version?: ThunderstoreVersion | undefined;
+}
+
+const props = defineProps<LocalModCardProps>();
+
+const { isConcerningPackage, wasConcerningPackage } = useConcerningPackageComposable();
+const { uninstallMod } = useModManagementComposable();
+
+const disableChangePending = ref<boolean>(false);
+const icon = useModIcon(() => props.mod);
+
+// Mod loader packages can't be disabled as it's hard to define
+// what that should even do in all cases.
+const canBeDisabled = computed(() => !store.getters['isModLoader'](props.mod.getName()));
+
+const isDeprecated = computed(() => {
+    if (props.mod.getSource() === 'hexium' && store.state.tsMods.isThunderstoreModListUpdateInProgress) {
+        return false;
+    }
+    return store.state.tsMods.deprecated.get(props.mod.getName()) || false;
+});
+const isLatestVersion = computed(() => store.getters['tsMods/isLatestVersion'](props.mod));
+const hasPreviousVersion = computed(() => props.mod.getPreviousVersionNumber() !== undefined);
+const localModList = computed(() => store.state.profile.modList);
+const tsMod = computed<ThunderstoreMod>(() => store.getters['tsMods/tsMod'](props.mod));
+
+const unsatisfiedDependencies = computed<UnsatisfiedDependencies | undefined>(() =>
+    store.getters['profile/unsatisfiedDependencies'].get(props.mod.getName())
+);
+const disabledDependencies = computed<ManifestV2[]>(() => unsatisfiedDependencies.value?.disabledDependencies ?? []);
+const missingDependencies = computed<string[]>(() => unsatisfiedDependencies.value?.missingDependencies ?? []);
+
+async function disableMod() {
+    if (disableChangePending.value) {
+        return;
+    }
+
+    disableChangePending.value = true;
+    const dependants = Dependants.getDependantList(props.mod, localModList.value);
+
+    for (const mod of dependants) {
+        if (mod.isEnabled()) {
+            store.commit('openDisableModModal', props.mod);
+            disableChangePending.value = false;
+            return;
+        }
+    }
+
+    try {
+        await store.dispatch(
+            'profile/disableModsFromActiveProfile',
+            { mods: [props.mod] }
+        );
+    } catch (e) {
+        store.commit('error/handleError', {
+            error: R2Error.fromThrownValue(e),
+            severity: LogSeverity.ACTION_STOPPED
+        });
+    }
+
+    disableChangePending.value = false;
+}
+
+async function enableMod(mod: ManifestV2) {
+    if (disableChangePending.value) {
+        return;
+    }
+
+    disableChangePending.value = true;
+    const dependencies = Dependants.getDependencyList(mod, localModList.value);
+
+    try {
+        await store.dispatch(
+            'profile/enableModsOnActiveProfile',
+            { mods: [...dependencies, mod] }
+        );
+    } catch (e) {
+        store.commit('error/handleError', {
+            error: R2Error.fromThrownValue(e),
+            severity: LogSeverity.ACTION_STOPPED
+        });
+    }
+
+    disableChangePending.value = false;
+}
+
+function updateMod() {
+    if (tsMod.value !== undefined) {
+        store.commit('openDownloadModVersionSelectModal', tsMod.value);
+    }
+}
+
+function copyVersion() {
+    InteractionProvider.instance.copyToClipboard(props.mod.getVersionNumber().toString());
+}
+
+async function undoLastUpdate() {
+    const previousVersion = props.mod.getPreviousVersionNumber();
+    const mod = tsMod.value;
+    if (previousVersion === undefined || mod === undefined) {
+        return;
+    }
+
+    const activeGame = store.state.activeGame;
+    const hexiumVersion = mod.getSource() === 'hexium'
+        ? mod.getHexiumVersions().find((candidate) => candidate.getVersionNumber().toString() === previousVersion.toString())
+        : undefined;
+
+    let version: ThunderstoreVersion;
+    if (hexiumVersion !== undefined) {
+        version = hexiumVersion;
+    } else {
+        try {
+            version = await PackageDb.getVersionAsThunderstoreVersion(
+                activeGame.internalFolderName,
+                props.mod.getName(),
+                previousVersion.toString()
+            );
+        } catch {
+            return;
+        }
+    }
+
+    const combos = [new ThunderstoreCombo()];
+    combos[0]!.setMod(mod);
+    combos[0]!.setVersion(version);
+
+    const profile = store.getters['profile/activeProfile'].asImmutableProfile();
+
+    await store.dispatch('download/downloadAndInstallCombos', {
+        combos,
+        profile,
+        game: activeGame,
+        installMode: InstallMode.INSTALL_SPECIFIC
+    });
+
+    const updatedList = await ProfileModList.updateMod(props.mod, profile, async (mod) => {
+        mod.setPreviousVersionNumber(undefined);
+    });
+
+    if (!(updatedList instanceof R2Error)) {
+        await store.dispatch('profile/updateModList', updatedList);
+    }
+}
+
+function downloadDependency(dependencyString: string) {
+    const [name, version] = splitToNameAndVersion(dependencyString);
+    const partialManifest = new ManifestV2();
+    partialManifest.setName(name);
+    partialManifest.setVersionNumber(new VersionNumber(version));
+    const dependency = store.getters['tsMods/tsMod'](partialManifest);
+
+    if (dependency === undefined) {
+        const error = new R2Error(
+            `${dependencyString} could not be found`,
+            'You may be offline, or the mod was removed from Thunderstore.',
+            'The dependency may not yet be published to Thunderstore and may be available elsewhere.'
+        );
+        store.commit('error/handleError', error);
+        return;
+    }
+    store.commit('openDownloadModVersionSelectModal', dependency);
+}
+
+function viewAssociatedMods() {
+    store.commit('openAssociatedModsModal', props.mod);
+}
+
+// Need to wrap util call in method to allow access from Vue context
+function getReadableDate(value: number): string {
+    return valueToReadableDate(value);
+}
+
+function dependencyStringToModName(x: string) {
+    return x.substring(0, x.lastIndexOf('-'));
+}
+
+function openReviewModal() {
+    store.commit('openConcerningModReviewModal', props.mod);
+}
+</script>
+
+<template>
+    <ExpandableCard
+        :description="mod.getDescription()"
+        :enabled="mod.isEnabled()"
+        :id="`${mod.getAuthorName()}-${mod.getName()}-${mod.getVersionNumber()}`"
+        :image="icon"
+        :allowSorting="true"
+        :class="[{'card--is-concern': isConcerningPackage(props.mod)}]"
+    >
+
+        <template v-slot:title>
+            <span class="non-selectable">
+                <span v-if="isDeprecated"
+                    class="tag is-danger margin-right margin-right--half-width"
+                    v-tooltip.right="'This mod is deprecated and could be broken'">
+                    Deprecated
+                </span>
+                <span v-if="!mod.isEnabled()"
+                    class="tag is-warning margin-right margin-right--half-width"
+                    v-tooltip.right="'This mod will not be used in-game'">
+                    Disabled
+                </span>
+                <span class="card-title selectable">
+                    <component :is="mod.isEnabled() ? 'span' : 'strike'" class="selectable">
+                        {{mod.getDisplayName()}}
+                        <span class="selectable card-byline">
+                            v{{mod.getVersionNumber()}}
+                            <i
+                                class="fas fa-clipboard copy-version-icon"
+                                title="Copy version number"
+                                @click.stop.prevent="copyVersion"
+                            />
+                        </span>
+                        <span :class="`card-byline ${mod.isEnabled() && 'selectable'}`">
+                            by {{mod.getAuthorName()}}
+                        </span>
+                    </component>
+                </span>
+            </span>
+        </template>
+
+        <template v-slot:description>
+            <p class='card-timestamp' v-if="mod.getInstalledAtTime() !== 0"><strong>Installed on:</strong> {{ getReadableDate(mod.getInstalledAtTime()) }}</p>
+            <p class='card-timestamp' v-if="version && version.getDateCreated()"><strong>Released on:</strong>
+                {{ getReadableDate(version!.getDateCreated()!.getTime()) }}
+            </p>
+            <div class="notification is-warning" v-if="isConcerningPackage(props.mod)">
+                <p>This mod was originally downloaded from Thunderstore, but can no longer be found on the site.</p>
+                <p><strong>It is recommended that you remove this mod.</strong></p>
+                <button class="button is-primary" @click.stop.prevent="openReviewModal">
+                    Review mod
+                </button>
+            </div>
+        </template>
+
+        <!-- Show icon button row even when card is collapsed -->
+        <template v-slot:other-icons>
+            <span v-if="wasConcerningPackage(props.mod)"
+                  class='card-header-icon'>
+                <i v-tooltip.left="`This package can no longer be found on Thunderstore`"
+                   class='fas fa-unlink'
+                ></i>
+            </span>
+            <DonateIconButton :mod="tsMod" v-if="tsMod"/>
+            <span v-if="!isLatestVersion"
+                @click.prevent.stop="updateMod()"
+                class='card-header-icon'>
+                <i class='fas fa-cloud-upload-alt' v-tooltip.left="'An update is available'"></i>
+            </span>
+            <span v-if="disabledDependencies.length || missingDependencies.length"
+                class='card-header-icon'>
+                <i v-tooltip.left="`There is an issue with the dependencies for this mod`"
+                    class='fas fa-exclamation-circle'
+                ></i>
+            </span>
+            <span v-if="canBeDisabled"
+                @click.prevent.stop="() => mod.isEnabled() ? disableMod() : enableMod(mod)"
+                class='card-header-icon'>
+                <div class="field">
+                    <input :id="`switch-${mod.getName()}`"
+                        type="checkbox"
+                        :class="['switch', 'is-small', {'switch is-info' : mod.isEnabled()}]"
+                        :checked="mod.isEnabled()" />
+                    <label :for="`switch-${mod.getName()}`"
+                        v-tooltip.left="mod.isEnabled() ? 'Disable' : 'Enable'"></label>
+                </div>
+            </span>
+        </template>
+
+        <!-- Show bottom button row -->
+        <button @click="updateMod()" class='button is-primary'>
+            {{ isLatestVersion ? 'Change version' : 'Update' }}
+        </button>
+
+        <button v-if="canBeDisabled && mod.isEnabled()" @click="disableMod()" class='button is-ghost'>
+            Disable
+        </button>
+        <button v-else-if="canBeDisabled && !mod.isEnabled()" @click="enableMod(mod)" class='button is-ghost' >
+            Enable
+        </button>
+
+        <button @click="viewAssociatedMods()" class='button is-ghost'>
+            Associated
+        </button>
+
+        <ExternalLink :url="mod.getWebsiteUrl()" class="button is-ghost">
+            Website
+            <i class="fas fa-external-link-alt margin-left margin-left--half-width"></i>
+        </ExternalLink>
+
+        <button v-if="hasPreviousVersion" @click="undoLastUpdate()" class='button is-ghost'>
+            Undo last update
+        </button>
+
+        <button v-if="missingDependencies.length"
+            @click="downloadDependency(missingDependencies[0]!)"
+            class='button is-ghost'>
+            Download dependency
+        </button>
+
+        <button v-if="disabledDependencies.length"
+            @click="enableMod(disabledDependencies[0]!)"
+            class='button is-ghost'>
+            Enable {{disabledDependencies[0]!.getDisplayName()}}
+        </button>
+
+        <button @click="uninstallMod(props.mod)" class='button is-danger'>
+            Uninstall
+        </button>
+
+        <DonateButton v-if="tsMod" :mod="tsMod"/>
+    </ExpandableCard>
+</template>
+
+<style scoped lang="scss">
+.switch {
+    position: relative;
+}
+
+.copy-version-icon {
+    font-size: 0.75em;
+    margin-left: 0.35em;
+    color: var(--text-secondary);
+    cursor: pointer;
+    opacity: 0.7;
+
+    &:hover {
+        opacity: 1;
+        color: var(--link);
+    }
+}
+</style>

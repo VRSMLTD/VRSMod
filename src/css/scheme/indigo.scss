@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "indigo",
+    $background: #080616,
+    $text: #e8e6f7,
+    $primary: #4a4ad1,
+    $danger: #b8425a,
+    $dark: true
+);

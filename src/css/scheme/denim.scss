@@ -1,0 +1,10 @@
+@use "theme-builder" as tb;
+
+@include tb.theme(
+    $slug: "denim",
+    $background: #1f2d3b,
+    $text: #cedef1,
+    $primary: #2b5cb6,
+    $danger: #c44a5a,
+    $dark: true
+);
